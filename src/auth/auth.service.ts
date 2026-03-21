@@ -8,8 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
-import { v4 as uuidv4 } from 'uuid';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UsersService } from '../users/users.service.js';
 import { MailService } from '../mail/mail.service.js';
@@ -153,7 +152,7 @@ export class AuthService {
       return { message: 'If that email exists, a reset link has been sent' };
     }
 
-    const rawToken = uuidv4();
+    const rawToken = randomUUID();
     const tokenHash = this.hashToken(rawToken);
 
     await this.prisma.passwordResetToken.create({
@@ -225,7 +224,7 @@ export class AuthService {
       expiresIn: this.parseDuration(expiresIn) / 1000,
     });
 
-    const refreshToken = uuidv4();
+    const refreshToken = randomUUID();
     const tokenHash = this.hashToken(refreshToken);
     const refreshExpiresIn = this.configService.get<string>(
       'JWT_REFRESH_EXPIRES_IN',
@@ -236,7 +235,7 @@ export class AuthService {
       data: {
         userId,
         tokenHash,
-        family: family ?? uuidv4(),
+        family: family ?? randomUUID(),
         expiresAt: new Date(Date.now() + this.parseDuration(refreshExpiresIn)),
       },
     });
