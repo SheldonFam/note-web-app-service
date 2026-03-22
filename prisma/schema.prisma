@@ -9,7 +9,8 @@ datasource db {
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
-  passwordHash    String
+  passwordHash    String?
+  provider        String    @default("local")
   lastLoginAt     DateTime?
   isEmailVerified Boolean   @default(false)
   createdAt       DateTime  @default(now())

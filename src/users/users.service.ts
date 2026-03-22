@@ -34,6 +34,17 @@ export class UsersService {
     });
   }
 
+  async createOAuthUser(email: string, provider: string) {
+    return this.prisma.user.create({
+      data: { email, provider, isEmailVerified: true },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async updatePassword(userId: string, passwordHash: string) {
     return this.prisma.user.update({
       where: { id: userId },

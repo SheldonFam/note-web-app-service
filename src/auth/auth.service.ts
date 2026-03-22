@@ -17,6 +17,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { GoogleAuthDto } from './dto/google-auth.dto.js';
 
 @Injectable()
 export class AuthService {
@@ -49,7 +50,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -67,6 +68,47 @@ export class AuthService {
         email: user.email,
         createdAt: user.createdAt,
       },
+      ...tokens,
+    };
+  }
+
+  async googleLogin(dto: GoogleAuthDto) {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${dto.accessToken}` },
+    });
+
+    if (!res.ok) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const profile = (await res.json()) as { email?: string };
+    if (!profile.email) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const email = profile.email;
+    const existing = await this.usersService.findByEmail(email);
+
+    let userId: string;
+    let createdAt: Date;
+
+    if (existing) {
+      userId = existing.id;
+      createdAt = existing.createdAt;
+    } else {
+      const newUser = await this.usersService.createOAuthUser(email, 'google');
+      userId = newUser.id;
+      createdAt = newUser.createdAt;
+      await this.prisma.userPreference.create({
+        data: { userId },
+      });
+    }
+
+    await this.usersService.updateLastLogin(userId);
+    const tokens = await this.generateTokens(userId, email);
+
+    return {
+      user: { id: userId, email, createdAt },
       ...tokens,
     };
   }
@@ -122,7 +164,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new UnauthorizedException();
     }
 

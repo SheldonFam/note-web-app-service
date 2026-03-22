@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { ForgotPasswordDto } from './dto/forgot-password.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { GoogleAuthDto } from './dto/google-auth.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 
@@ -33,6 +34,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  googleLogin(@Body() dto: GoogleAuthDto) {
+    return this.authService.googleLogin(dto);
   }
 
   @Post('logout')
