@@ -73,15 +73,23 @@ export class AuthService {
   }
 
   async googleLogin(dto: GoogleAuthDto) {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${dto.accessToken}` },
-    });
+    let profile: { email?: string };
+    try {
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${dto.accessToken}` },
+        signal: AbortSignal.timeout(5000),
+      });
 
-    if (!res.ok) {
-      throw new UnauthorizedException('Invalid Google token');
+      if (!res.ok) {
+        throw new UnauthorizedException('Invalid Google token');
+      }
+
+      profile = (await res.json()) as { email?: string };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Failed to verify Google token');
     }
 
-    const profile = (await res.json()) as { email?: string };
     if (!profile.email) {
       throw new UnauthorizedException('Invalid Google token');
     }
